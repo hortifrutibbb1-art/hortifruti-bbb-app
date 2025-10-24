@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hortifruti BBB - Pedidos Online</title>
+    <style>
+        /* Estilos CSS simples para simular a aparência de um app */
+        body { font-family: sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; }
+        header { background-color: #4CAF50; color: white; padding: 15px; text-align: center; }
+        .produto-lista { display: flex; flex-wrap: wrap; justify-content: space-around; padding: 10px; }
+        .produto-card { background-color: white; border: 1px solid #ddd; border-radius: 8px; margin: 10px; padding: 15px; width: 40%; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
+        .produto-card h3 { color: #388E3C; }
+        .produto-card p { margin: 5px 0; }
+        .btn-add { background-color: #FF9800; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        .carrinho { background-color: #fff; padding: 20px; margin-top: 20px; border-top: 1px solid #ccc; }
+        #itens-carrinho { margin-bottom: 15px; }
+        .item-carrinho { border-bottom: 1px dotted #eee; padding: 10px 0; display: flex; justify-content: space-between; align-items: center; }
+        .btn-checkout { background-color: #007bff; color: white; border: none; padding: 12px 20px; border-radius: 4px; cursor: pointer; width: 100%; font-size: 1.1em; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Hortifruti BBB 🥕 App</h1>
+        <p>Seus produtos frescos com um clique!</p>
+    </header>
+
+    <div class="produto-lista" id="lista-produtos">
+        </div>
+
+    <div class="carrinho">
+        <h2>Seu Carrinho</h2>
+        <div id="itens-carrinho">
+            <p id="carrinho-vazio" style="text-align: center;">Carrinho Vazio.</p>
+        </div>
+        <h3>Total: R$ <span id="total-carrinho">0.00</span></h3>
+        
+        <label for="nome-cliente">Seu Nome:</label>
+        <input type="text" id="nome-cliente" placeholder="Para identificarmos seu pedido" style="width: 98%; padding: 10px; margin-bottom: 15px; border: 1px solid #ccc;">
+
+        <button class="btn-checkout" onclick="finalizarPedido()">Finalizar Pedido (via WhatsApp)</button>
+    </div>
+
+    <script src="app.js"></script> 
+</body>
+</html>
+
+// --- 1. DADOS DOS PRODUTOS ---
+const produtos = [
+    { id: 1, nome: "Banana Prata (Kg)", preco: 4.50, unidade: "Kg" },
+    { id: 2, nome: "Alface Americana (Un)", preco: 3.00, unidade: "Un" },
+    { id: 3, nome: "Tomate Italiano (Kg)", preco: 7.90, unidade: "Kg" },
+    { id: 4, nome: "Morango (Caixa)", preco: 10.00, unidade: "Cx" }
+];
+
+// Telefone do Hortifruti BBB (Mude para o seu número real com código do país e DDD)
+const TELEFONE_BBB = "5511999999999"; 
+
+let carrinho = JSON.parse(localStorage.getItem('carrinhoBBB')) || [];
+
+// --- 2. FUNÇÕES DE RENDERIZAÇÃO ---
+
+// Exibe a lista de produtos na tela
+function renderizarProdutos() {
+    const lista = document.getElementById('lista-produtos');
+    lista.innerHTML = '';
+    produtos.forEach(produto => {
+        const div = document.createElement('div');
+        div.className = 'produto-card';
+        div.innerHTML = `
+            <h3>${produto.nome}</h3>
+            <p>R$ ${produto.preco.toFixed(2)} / ${produto.unidade}</p>
+            <label for="qtd-${produto.id}">Qtd (${produto.unidade}):</label>
+            <input type="number" id="qtd-${produto.id}" value="1" min="1" style="width: 50px; margin-top: 5px;">
+            <button class="btn-add" onclick="adicionarAoCarrinho(${produto.id})">Adicionar</button>
+        `;
+        lista.appendChild(div);
+    });
+}
+
+// Exibe os itens no carrinho e calcula o total
+function renderizarCarrinho() {
+    const itensCarrinho = document.getElementById('itens-carrinho');
+    const totalCarrinho = document.getElementById('total-carrinho');
+    const carrinhoVazioMsg = document.getElementById('carrinho-vazio');
+    
+    itensCarrinho.innerHTML = '';
+    let total = 0;
+
+    if (carrinho.length === 0) {
+        carrinhoVazioMsg.style.display = 'block';
+    } else {
+        carrinhoVazioMsg.style.display = 'none';
+        carrinho.forEach((item, index) => {
+            const produtoInfo = produtos.find(p => p.id === item.id);
+            const subtotal = produtoInfo.preco * item.quantidade;
+            total += subtotal;
+
+            const div = document.createElement('div');
+            div.className = 'item-carrinho';
+            div.innerHTML = `
+                <span>${item.quantidade} x ${produtoInfo.nome}</span>
+                <span>R$ ${subtotal.toFixed(2)}</span>
+            `;
+            itensCarrinho.appendChild(div);
+        });
+    }
+
+    totalCarrinho.textContent = total.toFixed(2);
+    // Salva o carrinho no LocalStorage sempre que o renderizar
+    localStorage.setItem('carrinhoBBB', JSON.stringify(carrinho));
+}
+
+
+// --- 3. FUNÇÕES DE AÇÃO ---
+
+// Adiciona o produto ao array do carrinho
+function adicionarAoCarrinho(produtoId) {
+    const produtoInfo = produtos.find(p => p.id === produtoId);
+    const inputQtd = document.getElementById(`qtd-${produtoId}`);
+    const quantidade = parseInt(inputQtd.value);
+
+    if (quantidade > 0) {
+        const itemExistente = carrinho.find(item => item.id === produtoId);
+        
+        if (itemExistente) {
+            itemExistente.quantidade += quantidade;
+        } else {
+            carrinho.push({ id: produtoId, quantidade: quantidade });
+        }
+
+        alert(`${quantidade} de ${produtoInfo.nome} adicionado(s) ao carrinho!`);
+        renderizarCarrinho(); // Atualiza a visualização e salva no localStorage
+    } else {
+        alert("Por favor, insira uma quantidade válida.");
+    }
+}
+
+// Monta a mensagem e abre o WhatsApp
+function finalizarPedido() {
+    const nomeCliente = document.getElementById('nome-cliente').value.trim();
+    
+    if (nomeCliente === "") {
+        alert("Por favor, insira seu nome para identificarmos o pedido.");
+        return;
+    }
+    
+    if (carrinho.length === 0) {
+        alert("Seu carrinho está vazio. Adicione produtos para fazer um pedido.");
+        return;
+    }
+
+    let mensagem = `*NOVO PEDIDO - Hortifruti BBB* \n\n*Cliente:* ${nomeCliente}\n\n*Itens do Pedido:*\n`;
+    let total = 0;
+
+    carrinho.forEach(item => {
+        const produtoInfo = produtos.find(p => p.id === item.id);
+        const subtotal = produtoInfo.preco * item.quantidade;
+        total += subtotal;
+        mensagem += `${item.quantidade} ${produtoInfo.unidade} de ${produtoInfo.nome} (R$ ${subtotal.toFixed(2)})\n`;
+    });
+
+    mensagem += `\n*TOTAL DO PEDIDO: R$ ${total.toFixed(2)}*`;
+    mensagem += "\n\n(Aguarde nossa confirmação de entrega e pagamento!)";
+
+    // Codifica a mensagem para URL e monta o link do WhatsApp
+    const urlWhatsApp = `https://wa.me/${TELEFONE_BBB}?text=${encodeURIComponent(mensagem)}`;
+
+    // Abre o WhatsApp
+    window.open(urlWhatsApp, '_blank');
+    
+    // Limpa o carrinho após o envio
+    carrinho = [];
+    localStorage.removeItem('carrinhoBBB');
+    renderizarCarrinho();
+}
+
+// --- 4. INICIALIZAÇÃO ---
+window.onload = function() {
+    renderizarProdutos();
+    renderizarCarrinho(); // Carrega o carrinho salvo no localStorage ao abrir
+};
